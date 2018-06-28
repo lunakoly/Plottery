@@ -1,0 +1,60 @@
+package LCPackage;
+
+{$R *.RES}
+{$ALIGN ON}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST ON}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DESCRIPTION 'Some description for liteComps'}
+{$IMPLICITBUILD OFF}
+
+requires
+  vcl50;
+
+contains
+  LiteButton in 'LiteButton.pas',
+  LiteEdit in 'LiteEdit.pas',
+  uColorTheme in 'uColorTheme.pas',
+  uParser in 'uParser.pas',
+  LiteLabel in 'LiteLabel.pas',
+  LiteToggleLabel in 'LiteToggleLabel.pas',
+  LiteScrollBox in 'LiteScrollBox.pas',
+  LiteScrollbar in 'LiteScrollbar.pas',
+  CoordNet in 'CoordNet.pas',
+  uMaths in 'uMaths.pas',
+  uUtils in 'uUtils.pas',
+  LitePathSelector in 'LitePathSelector.pas',
+  LiteBackground in 'LiteBackground.pas',
+  LiteMemo in 'LiteMemo.pas',
+  ThemeSelector in 'ThemeSelector.pas',
+  uArrayList in 'uArrayList.pas',
+  uArrayListOfString in 'uArrayListOfString.pas',
+  uMap in 'uMap.pas',
+  uStringMapOfString in 'uStringMapOfString.pas',
+  uStringMap in 'uStringMap.pas',
+  uPoint in 'uPoint.pas',
+  uLayer in 'uLayer.pas',
+  uLine in 'uLine.pas',
+  uScene in 'uScene.pas',
+  uArrayListOfPoint in 'uArrayListOfPoint.pas',
+  uArrayListOfLine in 'uArrayListOfLine.pas',
+  uArrayListOfLayer in 'uArrayListOfLayer.pas';
+
+end.

@@ -1,0 +1,65 @@
+unit uLine;
+
+interface
+
+
+{
+    For serialization
+}
+type LineRecord = record
+    p1, p2: integer;    // index
+end;
+type LineRecordList = Array of LineRecord;
+
+
+{
+    Provides containers for lines
+}
+type Line = class(TObject)
+    p1, p2: integer;    // index
+
+    constructor Create(f, t: integer);
+end;
+type LineList = Array of Line;
+
+
+function lToClass(r: LineRecord): Line;
+function lToRecord(l: Line): LineRecord;
+function lCopy(l: Line): Line;
+
+
+implementation
+
+
+// Line
+constructor Line.Create(f, t: integer);
+begin
+    self.p1 := f;
+    self.p2 := t;
+end;
+
+
+function lToRecord(l: Line): LineRecord;
+var r: LineRecord;
+
+begin
+    r.p1 := l.p1;
+    r.p2 := l.p2;
+    lToRecord := r;
+end;
+
+
+
+function lToClass(r: LineRecord): Line;
+begin
+    lToClass := Line.Create(r.p1, r.p2);
+end;
+
+
+function lCopy(l: Line): Line;
+begin
+    lCopy := Line.Create(l.p1, l.p2);
+end;
+
+
+end.

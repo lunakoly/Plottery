@@ -1,0 +1,373 @@
+unit ThemeSelector;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
+  LiteScrollBox, uColorTheme, LiteButton, LiteEdit;
+
+
+type ApplyEvent = procedure(theme: ColorTheme) of object;
+type UpdateEvent = procedure(theme: ColorTheme) of object;
+
+
+{
+    Represents UI for selecting theme colors
+}
+type TThemeSelector = class(TLiteScrollBox, IUnknown, IThemeSupporter)
+    private
+        theme, subTheme: ColorTheme;
+        cs: TColorDialog;
+        name: TLiteEdit;
+
+        applyEventHandle: ApplyEvent;
+        updateEventHandle: UpdateEvent;
+
+        // Crutch
+        userValidateStateTrigger: boolean;
+
+
+        procedure colorSelection(Sender: TObject;
+            Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+        procedure updateTheme();
+        function pickColor(default: TColor): TColor;
+        procedure apply(Sender: TObject;
+            Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+
+        // Crutch
+        procedure userValidateStateWrite(b: boolean);
+
+    protected
+
+    public
+        constructor Create(AOwner: TComponent); override;
+
+        // IThemeSupporter
+        procedure setTheme(theme: ColorTheme);
+        function getTheme(): ColorTheme;
+        procedure updateColors();
+
+        procedure validateState();
+        {
+            SubTheme is used to save current theme and be able to restore it in the future
+        }
+        procedure setSubTheme(theme: ColorTheme);
+        function getSubTheme(): ColorTheme;
+
+    published
+        property OnApply: ApplyEvent read applyEventHandle write applyEventHandle;
+        property OnColorUpdate: UpdateEvent read updateEventHandle write updateEventHandle;
+        property __UpdateState: boolean read userValidateStateTrigger write userValidateStateWrite;
+end;
+
+procedure Register;
+
+implementation
+
+
+procedure Register;
+begin
+    RegisterComponents('Lite', [TThemeSelector]);
+end;
+
+        
+// Override
+constructor TThemeSelector.Create(AOwner: TComponent);
+begin
+    inherited Create(AOwner);
+
+    cs := TColorDialog.Create(nil);
+    subTheme := ColorTheme.Create('sub');
+    setTheme(CT_DEFAULT_THEME);
+    validateState();
+    updateColors();
+end;
+
+
+// Override
+procedure TThemeSelector.setTheme(theme: ColorTheme);
+var
+    i: integer;
+    supporter: IThemeSupporter;
+
+begin
+    self.theme := theme;
+
+    for i := 0 to ControlCount - 1 do
+        if Supports(controls[i], IThemeSupporter, supporter) then
+            if controls[i] is TWinControl then
+                if (controls[i] as TWinControl).Tag = 1 then
+                    supporter.setTheme(theme);
+end;
+
+
+// Override
+function TThemeSelector.getTheme(): ColorTheme;
+begin
+    getTheme := self.theme;
+end;
+
+
+// Override
+procedure TThemeSelector.updateColors();
+var
+    i: integer;
+    supporter: IThemeSupporter;
+    
+begin
+    Color := theme.background;
+
+    for i := 0 to ControlCount - 1 do
+        if Supports(controls[i], IThemeSupporter, supporter) then
+            supporter.updateColors();
+end;
+
+
+// Crutch
+procedure TThemeSelector.userValidateStateWrite(b: boolean);
+begin
+    validateState();
+    updateColors();
+end;
+
+
+// TThemeSelector
+procedure TThemeSelector.validateState();
+var
+    i, top: integer;
+    button: TLiteButton;
+    localTheme: ColorTheme;
+
+begin
+    top := 0;
+
+    // clear children
+    for i := 0 to ControlCount - 1 do
+        controls[0].Free;
+
+
+    // init buttons (15)
+    for i := 0 to 14 do begin
+        button := TLiteButton.Create(self);
+        button.Parent := self;
+        button.Width := Width - 24;
+        button.Height := 24;
+        button.Top := top;
+        top := top + button.Height + 8;
+        button.AutoReact := false;
+        button.OnMouseDown := colorSelection;
+    end;
+
+    // setup
+    // interact
+    localTheme := ColorTheme.Create('local');
+    localTheme.interact := theme.interact;
+    localTheme.text := theme.text;
+    (controls[0] as TLiteButton).setTheme(localTheme);
+    (controls[0] as TLiteButton).Caption := 'Interact';
+
+    // active
+    localTheme := ColorTheme.Create('local');
+    localTheme.interact := theme.active;
+    localTheme.text := theme.text;
+    (controls[1] as TLiteButton).setTheme(localTheme);
+    (controls[1] as TLiteButton).Caption := 'Active';
+
+    // text
+    localTheme := ColorTheme.Create('local');
+    localTheme.interact := theme.text;
+    localTheme.text := theme.interact;
+    (controls[2] as TLiteButton).setTheme(localTheme);
+    (controls[2] as TLiteButton).Caption := 'Text';
+
+    // textfield
+    localTheme := ColorTheme.Create('local');
+    localTheme.interact := theme.textfield;
+    localTheme.text := theme.text;
+    (controls[3] as TLiteButton).setTheme(localTheme);
+    (controls[3] as TLiteButton).Caption := 'Textfield';
+
+    // warn
+    localTheme := ColorTheme.Create('local');
+    localTheme.interact := theme.warn;
+    localTheme.text := theme.text;
+    (controls[4] as TLiteButton).setTheme(localTheme);
+    (controls[4] as TLiteButton).Caption := 'Warn';
+
+    // title
+    localTheme := ColorTheme.Create('local');
+    localTheme.interact := theme.title;
+    localTheme.text := theme.text;
+    (controls[5] as TLiteButton).setTheme(localTheme);
+    (controls[5] as TLiteButton).Caption := 'Title';
+
+    // background
+    localTheme := ColorTheme.Create('local');
+    localTheme.interact := theme.background;
+    localTheme.text := theme.text;
+    (controls[6] as TLiteButton).setTheme(localTheme);
+    (controls[6] as TLiteButton).Caption := 'Background';
+
+    // coordBG
+    localTheme := ColorTheme.Create('local');
+    localTheme.interact := theme.coordBG;
+    localTheme.text := theme.text;
+    (controls[7] as TLiteButton).setTheme(localTheme);
+    (controls[7] as TLiteButton).Caption := 'Coord Net BG';
+
+    // coordGrid
+    localTheme := ColorTheme.Create('local');
+    localTheme.interact := theme.coordGrid;
+    localTheme.text := theme.text;
+    (controls[8] as TLiteButton).setTheme(localTheme);
+    (controls[8] as TLiteButton).Caption := 'Coord Net Grid';
+
+    // coordPoint
+    localTheme := ColorTheme.Create('local');
+    localTheme.interact := theme.coordPoint;
+    localTheme.text := theme.interact;
+    (controls[9] as TLiteButton).setTheme(localTheme);
+    (controls[9] as TLiteButton).Caption := 'Coord Net Point';
+
+    // coordOutline
+    localTheme := ColorTheme.Create('local');
+    localTheme.interact := theme.coordOutline;
+    localTheme.text := theme.text;
+    (controls[10] as TLiteButton).setTheme(localTheme);
+    (controls[10] as TLiteButton).Caption := 'Point Outline';
+
+    // coordText
+    localTheme := ColorTheme.Create('local');
+    localTheme.interact := theme.coordText;
+    localTheme.text := theme.coordBG;
+    (controls[11] as TLiteButton).setTheme(localTheme);
+    (controls[11] as TLiteButton).Caption := 'Coord Net Text';
+
+    // coordLine
+    localTheme := ColorTheme.Create('local');
+    localTheme.interact := theme.coordLine;
+    localTheme.text := theme.coordBG;
+    (controls[12] as TLiteButton).setTheme(localTheme);
+    (controls[12] as TLiteButton).Caption := 'Coord Net Line';
+
+    // coordAxis
+    localTheme := ColorTheme.Create('local');
+    localTheme.interact := theme.coordAxis;
+    localTheme.text := theme.coordBG;
+    (controls[13] as TLiteButton).setTheme(localTheme);
+    (controls[13] as TLiteButton).Caption := 'Coord Net Axis';
+
+    // scrollbarBG
+    localTheme := ColorTheme.Create('local');
+    localTheme.interact := theme.scrollbarBG;
+    localTheme.text := theme.text;
+    (controls[14] as TLiteButton).setTheme(localTheme);
+    (controls[14] as TLiteButton).Caption := 'ScrollBar BG';
+
+    top := top + 8;
+
+    // Name
+    name := TLiteEdit.Create(self);
+    name.Parent := self;
+    name.setValueType(VT_NOT_EMPTY_TEXT);
+    name.Text := 'New Theme';
+    name.Width := Width - 24;
+    name.Height := 24;
+    name.Top := top;
+    name.Tag := 1;
+    top := top + name.Height + 16;
+
+    // Apply Button
+    button := TLiteButton.Create(self);
+    button.Parent := self;
+    button.Width := Width - 32;
+    button.Height := 32;
+    button.Left := 8;
+    button.Top := top;
+    button.Tag :=  1;
+    button.Caption := 'Confirm';
+    button.OnMouseDown := apply;
+
+    inherited validateState();
+end;
+
+
+// TThemeSelector
+function TThemeSelector.pickColor(default: TColor): TColor;
+begin
+    if cs.Execute then
+        pickColor := cs.Color
+    else
+        pickColor := default;
+end;
+
+
+// TThemeSelector
+procedure TThemeSelector.updateTheme();
+begin
+    theme.interact   := (controls[0] as TLiteButton).getTheme().interact;
+    theme.active     := (controls[1] as TLiteButton).getTheme().interact;
+    theme.text       := (controls[2] as TLiteButton).getTheme().interact;
+    theme.textfield  := (controls[3] as TLiteButton).getTheme().interact;
+    theme.warn       := (controls[4] as TLiteButton).getTheme().interact;
+    theme.title      := (controls[5] as TLiteButton).getTheme().interact;
+    theme.background := (controls[6] as TLiteButton).getTheme().interact;
+    theme.coordBG    := (controls[7] as TLiteButton).getTheme().interact;
+    theme.coordGrid  := (controls[8] as TLiteButton).getTheme().interact;
+    theme.coordPoint := (controls[9] as TLiteButton).getTheme().interact;
+    theme.coordOutline := (controls[10] as TLiteButton).getTheme().interact;
+
+    theme.coordText := (controls[11] as TLiteButton).getTheme().interact;
+    theme.coordLine := (controls[12] as TLiteButton).getTheme().interact;
+    theme.coordAxis := (controls[13] as TLiteButton).getTheme().interact;
+    theme.scrollbarBG := (controls[14] as TLiteButton).getTheme().interact;
+end;
+
+
+// TThemeSelector
+procedure TThemeSelector.colorSelection(Sender: TObject;
+  Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+var
+    localTheme: ColorTheme;
+
+begin
+    localTheme := (Sender as TLiteButton).getTheme();
+    localTheme.interact := pickColor(localTheme.interact);
+    updateTheme();
+    localTheme.text := theme.text;
+    (Sender as TLiteButton).setTheme(localTheme);
+    validateState();
+    updateColors();
+
+    if Assigned(updateEventHandle) then
+        updateEventHandle(theme);
+end;
+
+
+// TThemeSelector
+procedure TThemeSelector.apply(Sender: TObject;
+  Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+begin
+    if name.isValid then
+        if Assigned(applyEventHandle) then begin
+            theme.name := name.Text;
+            applyEventHandle(theme);
+        end;
+end;
+
+
+// TThemeSelector
+procedure TThemeSelector.setSubTheme(theme: ColorTheme);
+begin
+    subTheme := theme;
+end;
+
+
+// TThemeSelector
+function TThemeSelector.getSubTheme(): ColorTheme;
+begin
+    getSubTheme := subTheme;
+end;
+
+
+end.

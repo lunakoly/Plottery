@@ -1,0 +1,131 @@
+unit LiteButton;
+
+interface
+
+uses
+    Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
+    ExtCtrls, uColorTheme, uUtils, uParser;
+
+
+{
+    Lite Button
+}
+type TLiteButton = class(TPanel, IUnknown, IThemeSupporter)
+    private
+        theme: ColorTheme;
+        isPressed: boolean;
+        isTriggerable: boolean;
+        shouldReact: boolean;
+
+    protected
+
+    public
+        constructor Create(AOwner: TComponent); override;
+        procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
+        procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
+
+        // IThemeSupporter
+        procedure setTheme(theme: ColorTheme);
+        function getTheme(): ColorTheme;
+        procedure updateColors();
+
+        function isActive(): boolean;
+        procedure setActive(b: boolean);
+
+    published
+        property IsTrigger: boolean read isTriggerable write isTriggerable;
+        property AutoReact: boolean read shouldReact write shouldReact;
+
+end;
+
+
+procedure Register;
+
+implementation
+
+
+procedure Register;
+begin
+    RegisterComponents('Lite', [TLiteButton]);
+end;
+
+
+// Override
+constructor TLiteButton.Create(AOwner: TComponent);
+begin
+    inherited Create(AOwner);
+    isPressed := false;
+    shouldReact := true;
+    isTriggerable := false;
+
+    theme := CT_DEFAULT_THEME;
+    updateColors();
+
+    // other
+    BevelOuter := bvNone;
+    Font.Size := 15;
+    Font.Name := 'Consolas';
+    Width := 144;
+    Height := 32;
+end;
+
+
+// Override
+procedure TLiteButton.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+begin
+    if shouldReact then
+        isPressed := not isPressed;     // to work with updated state
+    updateColors();
+    inherited MouseDown(Button, Shift, X, Y);
+end;
+
+
+// Override
+procedure TLiteButton.MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+begin
+    if not isTriggerable and shouldReact then
+        isPressed := false;
+    updateColors();
+    inherited MouseUp(Button, Shift, X, Y);
+end;
+
+
+// Override
+procedure TLiteButton.setTheme(theme: ColorTheme);
+begin
+    self.theme := theme;    // link
+end;
+
+
+// Override
+function TLiteButton.getTheme(): ColorTheme;
+begin
+    getTheme := theme;
+end;
+
+
+// Override
+procedure TLiteButton.updateColors();
+begin
+    Font.Color := theme.text;
+
+    if isPressed then
+        Color := theme.active
+    else
+        Color := theme.interact;
+end;
+
+
+function TLiteButton.isActive(): boolean;
+begin
+    isActive := isPressed;
+end;
+
+
+procedure TLiteButton.setActive(b: boolean);
+begin
+    isPressed := b;
+end;
+
+
+end.

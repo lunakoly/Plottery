@@ -1,0 +1,75 @@
+unit uStringMapOfString;
+
+interface;
+
+{
+    Automatic dynamic str map that contains strs
+}
+type StringMapOfString = class(StringMap)
+    public
+        constructor Create(); override;
+
+        procedure add(key, value: String); overload;
+        function remove(key: String): String; overload;
+        function get(key: String): String; overload;
+
+        function getValues(): StringArrayList; overload;
+end;
+
+
+implementation
+
+
+// StringMapOfString
+constructor StringMapOfString.Create();
+begin
+    keys := StringArrayList.Create();
+    vals := StringArrayList.Create();
+end;
+
+
+// StringMapOfString
+procedure StringMapOfString.add(key, value: String);
+begin
+    (keys as StringArrayList).add(key);
+    (vals as StringArrayList).add(value);
+end;
+
+
+// StringMapOfString
+function StringMapOfString.remove(key: String): String;
+var
+    index: integer;
+
+begin
+    remove := '';
+    index := find(key);
+
+    if index > -1 then begin
+        keys.remove(index);
+        remove := (vals as StringArrayList).remove(index);
+    end;
+end;
+
+
+// StringMapOfString
+function StringMapOfString.get(key: String): String;
+var index: integer;
+
+begin
+    get := '';
+    index := find(key);
+
+    if index > -1 then
+        get := (vals as StringArrayList).get(index);
+end;
+
+
+// StringMapOfString
+function StringMapOfString.getValues(): StringArrayList;
+begin
+    getValues := (vals as StringArrayList);
+end;
+
+
+end.

@@ -1,0 +1,81 @@
+unit LiteMemo;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
+  StdCtrls, uColorTheme;
+
+
+{
+    Lite Memo
+}
+type TLiteMemo = class(TMemo)
+    private
+        theme: ColorTheme;
+
+    protected
+
+    public
+         constructor Create(AOwner: TComponent); override;
+
+        // IThemeSupporter
+        procedure setTheme(theme: ColorTheme);
+        function getTheme(): ColorTheme;
+        procedure updateColors();
+
+    published
+
+end;
+
+procedure Register;
+
+implementation
+
+
+procedure Register;
+begin
+    RegisterComponents('Lite', [TLiteMemo]);
+end;
+
+
+// Override
+constructor TLiteMemo.Create(AOwner: TComponent);
+begin
+    inherited Create(AOwner);
+
+    theme := CT_DEFAULT_THEME;
+    updateColors();
+
+    // other
+    BorderStyle := bsNone;
+    ParentColor := True;
+    Font.Size := 12;
+    Font.Name := 'Consolas';
+    Width := 184;
+    Height := 96;
+end;
+
+
+// Override
+procedure TLiteMemo.setTheme(theme: ColorTheme);
+begin
+    self.theme := theme;    // link
+end;
+
+
+// Override
+function TLiteMemo.getTheme(): ColorTheme;
+begin
+    getTheme := theme;
+end;
+
+
+// Override
+procedure TLiteMemo.updateColors();
+begin
+    Font.Color := theme.text;
+end;
+
+
+end.

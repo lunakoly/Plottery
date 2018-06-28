@@ -1,0 +1,223 @@
+unit LiteScrollbar;
+
+interface
+
+uses
+    Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
+    ExtCtrls, uColorTheme, LiteButton;
+
+
+const SB_BAR_DEFAULT_WIDTH = 19;
+
+type MoveResponse = procedure(Shift: TShiftState; X, Y: Integer) of object;
+
+
+{
+    Lite Scrollbar
+}
+type TLiteScrollbar = class(TPanel, IUnknown, IThemeSupporter)
+    private
+        theme: ColorTheme;
+        bar: TLiteButton;
+        // used when drag starts
+        savedY: integer;
+        thumbMovedEvent: MoveResponse;
+
+        // Crutch
+        userValidateStateTrigger: boolean;
+
+
+        procedure updateSelfColors();
+
+        // thumb events
+        procedure startThumbDrag(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+        procedure doThumbDrag(Sender: TObject; Shift: TShiftState; X, Y: Integer);
+
+        // Crutch
+        procedure userValidateStateWrite(b: boolean);
+
+    protected
+        procedure Loaded(); override;
+        procedure Resize(); override;
+
+    public
+        constructor Create(AOwner: TComponent); override;
+
+        // IThemeSupporter
+        procedure setTheme(theme: ColorTheme);
+        function getTheme(): ColorTheme;
+        procedure updateColors();
+
+        procedure validateState();
+
+        {
+            Must be of [0;1]
+        }
+        procedure setSize(h: real);
+        function getSize(): real;
+        {
+            Must be of [0;1]
+        }
+        procedure setState(state: real);
+        function getState(): real;
+
+    published
+        property OnThumbMove: MoveResponse read thumbMovedEvent write thumbMovedEvent;
+        property __UpdateState: boolean read userValidateStateTrigger write userValidateStateWrite;
+
+end;
+
+procedure Register;
+
+implementation
+
+
+procedure Register;
+begin
+    RegisterComponents('Lite', [TLiteScrollbar]);
+end;
+
+
+// thumb event
+procedure TLiteScrollbar.startThumbDrag(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+begin
+    savedY := y;
+end;
+
+
+// thumb event
+procedure TLiteScrollbar.doThumbDrag(Sender: TObject; Shift: TShiftState; X, Y: Integer);
+var newY: integer;
+
+begin
+    newY := bar.Top;
+
+    if bar.isActive then begin
+        newY := bar.Top + y - savedY;
+
+        if newY < 0 then
+            newY := 0
+        else if newY > Height - bar.height then
+            newY := Height - bar.height;
+
+        if Assigned(thumbMovedEvent) then
+            thumbMovedEvent(Shift, X, Y);
+    end;
+
+    bar.Top := newY;
+end;
+
+
+// Override
+constructor TLiteScrollbar.Create(AOwner: TComponent);
+begin
+    inherited Create(AOwner);
+    bar := TLiteButton.Create(self);
+    bar.Parent := self;
+
+    theme := CT_DEFAULT_THEME;
+    updateSelfColors();
+
+    // default styles
+    BevelOuter := bvNone;
+    Height := 160;
+    Width := SB_BAR_DEFAULT_WIDTH;
+
+    validateState();
+
+    bar.OnMouseDown := startThumbDrag;
+    bar.OnMouseMove := doThumbDrag;
+end;
+
+
+// Override
+procedure TLiteScrollbar.Loaded();
+begin
+    Caption := '';
+    validateState();  // retrieves last wh from resizes
+end;
+
+
+// Override
+procedure TLiteScrollbar.setTheme(theme: ColorTheme);
+begin
+    self.theme := theme;    // link
+    bar.setTheme(theme);
+end;
+
+
+// Override
+function TLiteScrollbar.getTheme(): ColorTheme;
+begin
+    getTheme := theme;
+end;
+
+
+// Override
+procedure TLiteScrollbar.updateColors();
+begin
+    bar.updateColors();
+    updateSelfColors();
+end;
+
+
+// Override
+procedure TLiteScrollbar.Resize();
+begin
+    inherited Resize;
+    validateState();
+end;
+
+
+procedure TLiteScrollbar.userValidateStateWrite(b: boolean);
+begin
+    validateState();
+end;
+
+
+procedure TLiteScrollbar.updateSelfColors();
+begin
+    Color := theme.scrollbarBG;
+end;
+
+
+procedure TLiteScrollbar.setSize(h: real);
+var newH: real;
+
+begin
+    newH := h * Height;
+    if newH > Height then newH := Height
+    else if newH < 24 then newH := 24;
+
+    bar.Height := trunc(newH);
+end;
+
+
+function TLiteScrollbar.getSize(): real;
+begin
+    getSize := Height / bar.Height;
+end;
+
+
+procedure TLiteScrollbar.setState(state: real);
+begin
+    bar.Top := trunc(state * (Height - bar.Height));
+end;
+
+
+function TLiteScrollbar.getState(): real;
+begin
+    if Height <= bar.Height then
+        getState := 1.0
+    else
+        getState := (bar.Top + 0.0) / (Height - bar.Height);
+end;
+
+
+procedure TLiteScrollbar.validateState();
+begin
+    bar.Width := Width;
+end;
+
+
+end.

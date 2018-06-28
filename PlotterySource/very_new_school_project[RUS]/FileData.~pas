@@ -1,0 +1,208 @@
+unit FileData;
+
+interface
+
+uses uColorTheme, SysUtils, Classes, uUtils, uArrayList, uScene, uPoint, uLine;
+
+
+{
+    Used to store optional settings
+}
+type TSettings = class(TObject)
+    theme: ColorTheme;
+    builtinThemes, userThemes: ArrayList;
+    dropSettings: boolean;
+    exitAction: String[255];
+
+    constructor Create();
+end;
+
+
+{
+    Reading/Writeing
+}
+procedure dropSettings(path: String; obj: TSettings);
+function restoreSettings(path: String): TSettings;
+procedure saveProject(path: String; theScene: Scene);
+function restoreProject(path: String): Scene;
+
+
+implementation
+
+
+// Settings
+constructor TSettings.Create();
+begin
+    dropSettings := false;
+    exitAction := 'ask';
+
+    builtinThemes := ArrayList.Create();
+    userThemes := ArrayList.Create();
+    builtinThemes.add(CT_DEFAULT_THEME);
+    theme := builtinThemes.get(0) as ColorTheme;
+end;
+
+
+procedure dropSettings(path: String; obj: TSettings);
+var
+    fs: TFileStream;
+    i, n, k: integer;
+    isBuiltin: boolean;
+    r: ColorThemeRecord;
+
+begin
+    newFile(path);
+
+    fs := TFileStream.Create(path, fmOpenWrite);
+    fs.Write(obj.exitAction, 255 * sizeOf(Char));
+    fs.Write(obj.dropSettings, sizeOf(Boolean));
+
+    n := obj.userThemes.size();
+    fs.Write(n, sizeOf(integer));
+
+    for i := 0 to n - 1 do begin
+        r := ctToRecord(obj.userThemes.get(i) as ColorTheme);
+        fs.Write(r, sizeOf(ColorThemeRecord));
+    end;
+
+    // find current
+    k := 0;
+    isBuiltin := false;
+
+    for i := 0 to obj.builtinThemes.size() - 1 do
+        if obj.theme = obj.builtinThemes.get(i) then begin
+            k := i;
+            isBuiltin := true;
+            break;
+        end;
+
+    if not isBuiltin then
+        for i := 0 to obj.userThemes.size() - 1 do
+            if obj.theme = obj.userThemes.get(i) then begin
+                k := i;
+                break;
+            end;
+
+    fs.Write(isBuiltin, sizeOf(boolean));
+    fs.Write(k, sizeOf(integer));
+
+    fs.Free;
+end;
+
+
+function restoreSettings(path: String): TSettings;
+var
+    obj: TSettings;
+    fs: TFileStream;
+    i, n, k: integer;
+    isBuiltin: boolean;
+    r: ColorThemeRecord;
+
+begin
+    restoreSettings := nil;
+
+    if FileExists(path) then begin
+        obj := TSettings.Create();
+
+        fs := TFileStream.Create(path, fmOpenRead);
+        fs.Read(obj.exitAction, 255 * sizeOf(Char));
+        fs.Read(obj.dropSettings, sizeOf(Boolean));
+        fs.Read(n, sizeOf(integer));
+
+        for i := 0 to n - 1 do begin
+            fs.Read(r, sizeOf(ColorThemeRecord));
+            obj.userThemes.add(ctToClass(r));
+        end;
+
+        fs.Read(isBuiltin, sizeof(boolean));
+        fs.Read(k, sizeOf(integer));
+
+        if isBuiltin then
+            obj.theme := obj.builtinThemes.get(k) as ColorTheme
+        else
+            obj.theme := obj.userThemes.get(k) as ColorTheme;
+
+        fs.Free;
+        restoreSettings := obj;
+    end;
+end;
+
+
+procedure saveProject(path: String; theScene: Scene);
+var
+    sr: SceneRecord;
+    fs: TFileStream;
+    i, j, a, b, c: integer;
+
+begin
+    newFile(path);
+
+    fs := TFileStream.Create(path, fmOpenWrite);
+    sr := snToRecord(theScene);
+
+    fs.Write(sr.currentLayer, sizeOf(integer));
+    a := Length(sr.layers);
+    fs.Write(a, sizeOf(integer));
+
+    for i := 0 to a - 1 do begin
+        fs.Write(sr.layers[i].name, 255 * sizeOf(char));
+        fs.Write(sr.layers[i].currentPoint, sizeOf(integer));
+        fs.Write(sr.layers[i].currentLine, sizeOf(integer));
+        b := length(sr.layers[i].points);
+        c := length(sr.layers[i].lines);
+        fs.Write(b, sizeOf(integer));
+        fs.Write(c, sizeOf(integer));
+
+        for j := 0 to b - 1 do
+            fs.Write(sr.layers[i].points[j], sizeOf(PointRecord));
+
+        for j := 0 to c - 1 do
+            fs.Write(sr.layers[i].lines[j], sizeOf(LineRecord));
+    end;
+
+    fs.Free;
+end;
+
+
+
+function restoreProject(path: String): Scene;
+var
+    sr: SceneRecord;
+    fs: TFileStream;
+    i, j, a, b, c: integer;
+
+begin
+    restoreProject := nil;
+
+    if FileExists(path) then begin
+        fs := TFileStream.Create(path, fmOpenRead);
+
+        fs.Read(sr.currentLayer, sizeOf(integer));
+        fs.Read(a, sizeOf(integer));
+        Setlength(sr.layers, a);
+
+        for i := 0 to a - 1 do begin
+            fs.Read(sr.layers[i].name, 255 * sizeOf(char));
+            fs.Read(sr.layers[i].currentPoint, sizeOf(integer));
+            fs.Read(sr.layers[i].currentLine, sizeOf(integer));
+            fs.Read(b, sizeOf(integer));
+            fs.Read(c, sizeOf(integer));
+
+            Setlength(sr.layers[i].points, b);
+            Setlength(sr.layers[i].lines, c);
+
+            for j := 0 to b - 1 do
+                fs.Read(sr.layers[i].points[j], sizeOf(PointRecord));
+
+            for j := 0 to c - 1 do
+                fs.Read(sr.layers[i].lines[j], sizeOf(LineRecord));
+        end;
+
+
+        restoreProject := snToClass(sr);
+        fs.Free;
+    end;
+end;
+
+
+end.
